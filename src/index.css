@@ -1,0 +1,231 @@
+@import 'tailwindcss';
+
+@theme {
+  /* — Palette ————————————————————————— */
+  --color-emerald-deep: #0b3b32;
+  --color-emerald: #145c4b;
+  --color-emerald-light: #1f7a63;
+
+  --color-navy-deep: #0c1a2e;
+  --color-navy: #16294a;
+
+  --color-gold: #c9a227;
+  --color-gold-light: #e2c569;
+  --color-brass: #a8862f;
+
+  --color-cream: #f7f1e4;
+  --color-ivory: #fdfaf3;
+  --color-parchment: #ece2cd;
+
+  --color-burgundy: #7d2b3f;
+  --color-rose: #a8455c;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Jost', system-ui, sans-serif;
+
+  --ease-passport: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-emerald-deep);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    /* 400, not 300: the small letter-spaced caps used throughout are set on a
+       dark ground, where a light weight thins out to near-invisible. */
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+    font-size: 16px; /* keeps iOS from zooming on focus */
+  }
+}
+
+@layer components {
+  /* — Textures ————————————————————————
+     Paper grain and leather are generated, not image assets, so the app
+     stays fully offline with no binary payload. */
+  .texture-paper {
+    position: relative;
+  }
+  .texture-paper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .texture-leather {
+    background-color: var(--color-emerald-deep);
+    background-image:
+      radial-gradient(
+        ellipse at 30% 20%,
+        rgb(31 122 99 / 0.35),
+        transparent 60%
+      ),
+      radial-gradient(ellipse at 75% 85%, rgb(12 26 46 / 0.55), transparent 65%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6 0.75' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23l)' opacity='0.55'/%3E%3C/svg%3E");
+    background-blend-mode: overlay, normal, soft-light;
+  }
+
+  /* Gold foil-stamp text — a real gradient, not flat yellow */
+  .foil {
+    background: linear-gradient(
+      100deg,
+      #8f6f1c 0%,
+      var(--color-gold) 22%,
+      #f4e3a8 42%,
+      var(--color-gold) 58%,
+      #8f6f1c 82%,
+      var(--color-brass) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 1px 0 rgb(0 0 0 / 0.25);
+  }
+
+  /* Debossed edge for the cover emblem */
+  .emboss {
+    filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.12))
+      drop-shadow(0 -1px 1px rgb(0 0 0 / 0.4));
+  }
+
+  .card-paper {
+    /* Colour and image are set separately, not via the `background`
+       shorthand: `.guilloche` overrides background-image, and the shorthand
+       would reset background-color to transparent, letting the dark page
+       show through the card. */
+    background-color: var(--color-cream);
+    background-image: linear-gradient(
+      160deg,
+      var(--color-ivory) 0%,
+      var(--color-cream) 55%,
+      var(--color-parchment) 100%
+    );
+    color: var(--color-navy-deep);
+    box-shadow:
+      0 1px 2px rgb(11 59 50 / 0.2),
+      0 12px 28px -12px rgb(11 59 50 / 0.45);
+  }
+
+  /* Fine gold hairline used on dividers and card edges */
+  .rule-gold {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(201 162 39 / 0.65) 20%,
+      rgb(226 197 105 / 0.9) 50%,
+      rgb(201 162 39 / 0.65) 80%,
+      transparent
+    );
+  }
+
+  /* Guilloché security pattern behind data pages */
+  .guilloche {
+    background-image: repeating-radial-gradient(
+        circle at 50% 50%,
+        rgb(20 92 75 / 0.06) 0px,
+        rgb(20 92 75 / 0.06) 1px,
+        transparent 1px,
+        transparent 9px
+      ),
+      repeating-linear-gradient(
+        58deg,
+        rgb(125 43 63 / 0.045) 0px,
+        rgb(125 43 63 / 0.045) 1px,
+        transparent 1px,
+        transparent 11px
+      );
+  }
+
+  /* On a paper card the pattern layers over the gradient rather than
+     replacing it — background-image doesn't merge across classes. */
+  .card-paper.guilloche {
+    background-image: repeating-radial-gradient(
+        circle at 50% 50%,
+        rgb(20 92 75 / 0.06) 0px,
+        rgb(20 92 75 / 0.06) 1px,
+        transparent 1px,
+        transparent 9px
+      ),
+      repeating-linear-gradient(
+        58deg,
+        rgb(125 43 63 / 0.045) 0px,
+        rgb(125 43 63 / 0.045) 1px,
+        transparent 1px,
+        transparent 11px
+      ),
+      linear-gradient(
+        160deg,
+        var(--color-ivory) 0%,
+        var(--color-cream) 55%,
+        var(--color-parchment) 100%
+      );
+  }
+}
+
+@layer utilities {
+  .tracking-stamp {
+    letter-spacing: 0.32em;
+  }
+
+  /* Elegant, unobtrusive loading — the gold compass spin */
+  @keyframes compass-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    55% {
+      transform: rotate(400deg);
+    }
+    70% {
+      transform: rotate(340deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  .animate-compass {
+    animation: compass-spin 2.4s var(--ease-passport) infinite;
+  }
+
+  .safe-b {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .safe-t {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
