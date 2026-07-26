@@ -157,7 +157,7 @@ function WishlistView({ list, onEdit, onPromote, onDelete }) {
   )
 }
 
-function CardsView({ list, onEdit }) {
+function CardsView({ list, onEdit, onDelete }) {
   if (list.length === 0) return <Empty>No travel cards saved.</Empty>
 
   const total = list.reduce((s, c) => s + (Number(c.points) || 0), 0)
