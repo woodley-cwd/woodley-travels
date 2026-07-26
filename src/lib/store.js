@@ -39,6 +39,10 @@ export const withTimeout = (promise, ms = NET_TIMEOUT) =>
 
 /* — Shared mutation queue ——————————————————————— */
 
+// Every store registers itself here so the queue can reach across tables:
+// repairing an orphaned child row requires re-pushing its parent trip.
+const registry = new Map()
+
 const enqueue = (op) => write(QUEUE_KEY, [...read(QUEUE_KEY, []), op])
 
 export const queuedIds = () =>
@@ -51,6 +55,29 @@ async function push(op) {
       ? await q.delete().eq('id', op.id)
       : await q.upsert(op.row)
   if (error) throw error
+}
+
+/* A child row (food, hotel, photo…) can outlive its parent trip's queue entry:
+   if the trip's own insert was ever lost, the server rejects every child with a
+   foreign-key violation and the queue jams permanently. Repair it here — push
+   the parent trip from the local cache, then retry the child. Returns true if
+   the op no longer needs to stay in the queue. */
+async function rescueOrphan(op, err) {
+  if (err?.code !== '23503' || op.type !== 'upsert' || !op.row?.trip_id) return false
+  const trips = registry.get('travel_trips')
+  if (!trips) return false
+
+  const parent = read(trips.cacheKey, []).find((t) => t.id === op.row.trip_id)
+  if (!parent) {
+    // The trip is gone locally too — this row can never land anywhere. Drop it
+    // rather than blocking every later change forever.
+    console.warn('[sync] dropping orphaned change; its trip no longer exists', op)
+    return true
+  }
+  await withTimeout(push({ type: 'upsert', table: 'travel_trips', id: parent.id, row: trips.toRow(parent) }))
+  await withTimeout(push(op))
+  console.warn('[sync] repaired orphaned change by re-pushing its trip', op.id)
+  return true
 }
 
 export async function flushQueue() {
@@ -72,10 +99,18 @@ export async function flushQueue() {
     try {
       await withTimeout(push(op))
     } catch (err) {
-      blocked.add(op.id)
-      stuck.push(op)
-      lastError = `${op.table}: ${err?.message || 'network error'}`
-      console.warn('[sync] failed to push change', op, err)
+      let rescued = false
+      try {
+        rescued = await rescueOrphan(op, err)
+      } catch (repairErr) {
+        console.warn('[sync] repair attempt failed', op, repairErr)
+      }
+      if (!rescued) {
+        blocked.add(op.id)
+        stuck.push(op)
+        lastError = `${op.table}: ${err?.message || 'network error'}`
+        console.warn('[sync] failed to push change', op, err)
+      }
     }
   }
   write(QUEUE_KEY, stuck)
@@ -109,6 +144,8 @@ export function createStore({ table, cacheKey, columns, sort }) {
         return [c, v === '' || v === undefined ? null : v]
       })
     )
+
+  registry.set(table, { cacheKey, toRow })
 
   const order = sort ?? ((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
   const loadCache = () => [...read(cacheKey, [])].sort(order)
