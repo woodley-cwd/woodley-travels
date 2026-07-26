@@ -303,7 +303,7 @@ export default function HomeScreen({
         transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
         aria-label="Add a trip"
         className="fixed right-5 bottom-7 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-gold/40 bg-emerald shadow-[0_10px_28px_-8px_rgba(0,0,0,0.65)]"
-        style={{ bottom: 'max(1.75rem, env(safe-area-inset-bottom))' }}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 8rem)' }}
       >
         <Plus className="h-6 w-6 text-gold-light" />
       </motion.button>
