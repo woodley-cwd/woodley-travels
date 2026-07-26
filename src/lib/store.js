@@ -48,12 +48,26 @@ const enqueue = (op) => write(QUEUE_KEY, [...read(QUEUE_KEY, []), op])
 export const queuedIds = () =>
   new Set(read(QUEUE_KEY, []).map((op) => op.id))
 
+/* A queued op carries the row as it was serialised when the change was made.
+   That snapshot goes stale: later edits to the same row supersede it, and — the
+   reason this exists — a payload built by a buggy older version of the app
+   would otherwise replay its bad shape forever, immune to any fix. Rebuild from
+   the current cache whenever the row is still there. */
+function hydrate(op) {
+  if (op.type !== 'upsert') return op
+  const store = registry.get(op.table)
+  if (!store) return op
+  const current = read(store.cacheKey, []).find((r) => r.id === op.id)
+  return current ? { ...op, row: store.toRow(current) } : op
+}
+
 async function push(op) {
-  const q = supabase.from(op.table)
+  const live = hydrate(op)
+  const q = supabase.from(live.table)
   const { error } =
-    op.type === 'delete'
-      ? await q.delete().eq('id', op.id)
-      : await q.upsert(op.row)
+    live.type === 'delete'
+      ? await q.delete().eq('id', live.id)
+      : await q.upsert(live.row)
   if (error) throw error
 }
 
@@ -63,7 +77,21 @@ async function push(op) {
    the parent trip from the local cache, then retry the child. Returns true if
    the op no longer needs to stay in the queue. */
 async function rescueOrphan(op, err) {
-  if (err?.code !== '23503' || op.type !== 'upsert' || !op.row?.trip_id) return false
+  if (op.type !== 'upsert') return false
+
+  // A malformed payload (missing a required column) that hydrate couldn't
+  // rebuild means the row is gone from the cache too — there is nothing left
+  // to repair it from, and retrying it forever would block the row's queue.
+  if (err?.code === '23502') {
+    const store = registry.get(op.table)
+    const inCache = store && read(store.cacheKey, []).some((r) => r.id === op.id)
+    if (!inCache) {
+      console.warn('[sync] dropping unrepairable change; no local copy remains', op)
+      return true
+    }
+  }
+
+  if (err?.code !== '23503' || !op.row?.trip_id) return false
   const trips = registry.get('travel_trips')
   if (!trips) return false
 
@@ -82,8 +110,19 @@ async function rescueOrphan(op, err) {
 
 export async function flushQueue() {
   if (!isConfigured || !navigator.onLine) return
-  const queue = read(QUEUE_KEY, [])
-  if (queue.length === 0) return
+  const raw = read(QUEUE_KEY, [])
+  if (raw.length === 0) {
+    localStorage.removeItem(SYNC_ERROR_KEY)
+    return
+  }
+
+  // Only the last op per row matters: upserts are rebuilt from the cache by
+  // hydrate (so earlier ones are byte-identical), and a delete is terminal.
+  // Collapsing keeps the pending count honest — "6 changes" was really one
+  // trip saved six times.
+  const queue = raw.filter(
+    (op, i) => !raw.some((later, j) => j > i && later.id === op.id)
+  )
 
   // Ordering only matters per row — an insert and the delete that follows it
   // must replay in sequence, but one row's failure must not strand every other
