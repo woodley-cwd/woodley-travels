@@ -14,6 +14,25 @@ export const hotels = createStore({
   emptyAsNull: ['check_in', 'check_out', 'cost_usd', 'cost_local'],
 })
 
+/* Times are a date plus a plain clock string, never a timestamp: a flight's
+   times belong to each airport's own zone, and a real timestamp would re-render
+   in the reader's zone and quote the wrong boarding time. */
+export const flights = createStore({
+  table: 'travel_flights',
+  cacheKey: 'wt.flights.v1',
+  columns: [
+    'id', 'trip_id', 'airline', 'flight_number', 'origin', 'destination',
+    'depart_date', 'depart_time', 'arrive_date', 'arrive_time', 'seat',
+    'confirmation', 'cost_usd', 'cost_local', 'currency', 'notes',
+    'created_at', 'updated_at',
+  ],
+  sort: (a, b) =>
+    `${a.depart_date || ''}${a.depart_time || ''}`.localeCompare(
+      `${b.depart_date || ''}${b.depart_time || ''}`
+    ),
+  emptyAsNull: ['depart_date', 'arrive_date', 'cost_usd', 'cost_local'],
+})
+
 export const food = createStore({
   table: 'travel_food',
   cacheKey: 'wt.food.v1',
@@ -40,13 +59,31 @@ export const photos = createStore({
   columns: ['id', 'trip_id', 'url', 'caption', 'created_at', 'updated_at'],
 })
 
-export const STORES = { hotels, food, postcards, photos }
+export const STORES = { flights, hotels, food, postcards, photos }
 
 const stamp = (trip_id) => ({
   id: crypto.randomUUID(),
   trip_id,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+})
+
+export const emptyFlight = (trip_id) => ({
+  ...stamp(trip_id),
+  airline: '',
+  flight_number: '',
+  origin: '',
+  destination: '',
+  depart_date: '',
+  depart_time: '',
+  arrive_date: '',
+  arrive_time: '',
+  seat: '',
+  confirmation: '',
+  cost_usd: '',
+  cost_local: '',
+  currency: '',
+  notes: '',
 })
 
 export const emptyHotel = (trip_id) => ({
@@ -100,10 +137,11 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0
 }
 
-export function tripTotals({ hotels: h = [], food: f = [] }) {
+export function tripTotals({ flights: fl = [], hotels: h = [], food: f = [] }) {
+  const air = fl.reduce((s, x) => s + num(x.cost_usd), 0)
   const lodging = h.reduce((s, x) => s + num(x.cost_usd), 0)
   const dining = f.reduce((s, x) => s + num(x.cost_usd), 0)
-  return { lodging, dining, total: lodging + dining }
+  return { air, lodging, dining, total: air + lodging + dining }
 }
 
 export const money = (n) =>

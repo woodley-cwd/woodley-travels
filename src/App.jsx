@@ -13,7 +13,7 @@ import BadgesScreen from './screens/BadgesScreen'
 import TripDetail from './screens/TripDetail'
 import TripForm from './screens/TripForm'
 import { fetchTrips, saveTrip, deleteTrip, loadCache, emptyTrip, flushQueue } from './lib/trips'
-import { STORES, emptyHotel, emptyFood, emptyPostcard, emptyPhoto } from './lib/entries'
+import { STORES, emptyFlight, emptyHotel, emptyFood, emptyPostcard, emptyPhoto } from './lib/entries'
 import { evaluateBadges } from './lib/badges'
 import { flushMedia } from './lib/media'
 import PlanScreen from './screens/PlanScreen'
@@ -24,9 +24,10 @@ import SyncStatus from './components/SyncStatus'
 import { PLANNING_STORES, emptyChecklistItem } from './lib/planning'
 import { dueReminders, notifyDue } from './lib/reminders'
 
-const KINDS = ['hotels', 'food', 'postcards', 'photos']
+const KINDS = ['flights', 'hotels', 'food', 'postcards', 'photos']
 
 const blankEntry = {
+  flights: emptyFlight,
   hotels: emptyHotel,
   food: emptyFood,
   postcards: emptyPostcard,
@@ -36,6 +37,7 @@ const blankEntry = {
 // Which fields on each kind hold a media ref — used to repoint rows after a
 // deferred upload finally lands.
 const MEDIA_FIELDS = {
+  flights: [],
   hotels: [],
   food: ['photo_url'],
   postcards: ['front_url', 'back_url'],

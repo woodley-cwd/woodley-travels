@@ -7,7 +7,7 @@ import Postcard from '../components/Postcard'
 import TripChecklist from '../components/TripChecklist'
 import TravelChat from '../components/TravelChat'
 import {
-  Back, Pencil, Plus, Bed, Fork, Mail, Camera, Wallet, Heart, Stamp, Users, Sparkle,
+  Back, Pencil, Plus, Plane, Bed, Fork, Mail, Camera, Wallet, Heart, Stamp, Users, Sparkle,
 } from '../components/Icons'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -52,12 +52,13 @@ export default function TripDetail({
   trip, entries, checklist, templates, onBack, onEditTrip, onAddEntry, onEditEntry,
   onStamp, onSaveCheckItem, onDeleteCheckItem, onApplyTemplate,
 }) {
+  const flights = forTrip(entries.flights, trip.id)
   const hotels = forTrip(entries.hotels, trip.id)
   const food = forTrip(entries.food, trip.id)
   const postcards = forTrip(entries.postcards, trip.id)
   const photos = forTrip(entries.photos, trip.id)
 
-  const totals = tripTotals({ hotels, food })
+  const totals = tripTotals({ flights, hotels, food })
   const planning = trip.status === 'planning'
   const countdown = daysUntil(trip.start_date)
   const region = regionName(trip.scope, trip.region_code)
@@ -183,6 +184,7 @@ export default function TripDetail({
             </span>
           </div>
           <div className="mt-3 flex flex-col gap-1.5">
+            {totals.air > 0 && <Line label="Airfare" value={totals.air} />}
             <Line label="Lodging" value={totals.lodging} />
             <Line label="Food" value={totals.dining} />
             <div className="rule-gold my-1 h-px w-full opacity-60" />
@@ -193,6 +195,63 @@ export default function TripDetail({
           </div>
         </motion.div>
       )}
+
+      {/* Flights */}
+      <Section icon={Plane} title="Flights" count={flights.length} onAdd={() => onAddEntry('flights')}>
+        {flights.length === 0 ? (
+          <Empty>No flights booked yet.</Empty>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {flights.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => onEditEntry('flights', f)}
+                className="card-paper texture-paper w-full rounded-lg px-4 py-3 text-left"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="truncate font-sans text-[10px] tracking-stamp text-emerald uppercase">
+                    {[f.airline, f.flight_number].filter(Boolean).join(' · ')}
+                  </span>
+                  {Number(f.cost_usd) > 0 && (
+                    <span className="shrink-0 font-sans text-[12px] text-navy/75">
+                      {money(Number(f.cost_usd))}
+                    </span>
+                  )}
+                </div>
+
+                {/* Boarding-pass line: codes big, times underneath. */}
+                <div className="mt-1.5 flex items-center gap-3">
+                  <div className="min-w-0">
+                    <p className="font-display text-2xl leading-none text-emerald-deep">
+                      {f.origin || '—'}
+                    </p>
+                    <p className="mt-0.5 font-sans text-[10px] text-navy/75">{f.depart_time || ''}</p>
+                  </div>
+                  <span aria-hidden className="rule-gold h-px flex-1 opacity-70" />
+                  <Plane className="h-3.5 w-3.5 shrink-0 text-gold/70" />
+                  <span aria-hidden className="rule-gold h-px flex-1 opacity-70" />
+                  <div className="min-w-0 text-right">
+                    <p className="font-display text-2xl leading-none text-emerald-deep">
+                      {f.destination || '—'}
+                    </p>
+                    <p className="mt-0.5 font-sans text-[10px] text-navy/75">{f.arrive_time || ''}</p>
+                  </div>
+                </div>
+
+                <p className="mt-1.5 font-sans text-[10px] text-navy/75">
+                  {[
+                    formatRange(f.depart_date, f.arrive_date !== f.depart_date ? f.arrive_date : ''),
+                    f.seat && `Seat ${f.seat}`,
+                    f.confirmation,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </Section>
 
       {/* Hotels */}
       <Section icon={Bed} title="Hotels" count={hotels.length} onAdd={() => onAddEntry('hotels')}>

@@ -15,6 +15,7 @@ const VERSION = 1
 // excluded: they're conversational scratch, not records worth restoring.
 const KEYS = [
   'wt.trips.v1',
+  'wt.flights.v1',
   'wt.hotels.v1',
   'wt.food.v1',
   'wt.postcards.v1',

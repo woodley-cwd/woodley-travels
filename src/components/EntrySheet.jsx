@@ -51,6 +51,7 @@ function MoneyFields({ draft, set, international }) {
 }
 
 const TITLES = {
+  flights: 'Flight',
   hotels: 'Hotel',
   food: 'Food Entry',
   postcards: 'Postcard',
@@ -66,7 +67,7 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
 
   // Only hotels and food carry a required name; postcards and photos are
   // image-first and can be saved with nothing else filled in.
-  const required = { hotels: draft.name, food: draft.dish }[kind]
+  const required = { flights: draft.airline, hotels: draft.name, food: draft.dish }[kind]
   const canSave = required === undefined || String(required ?? '').trim().length > 0
 
   const submit = (e) => {
@@ -92,6 +93,129 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
   return (
     <Sheet title={`${isNew ? 'Add' : 'Edit'} ${TITLES[kind]}`} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {kind === 'flights' && (
+          <>
+            <div className="grid grid-cols-[1fr_auto] gap-3">
+              <Field label="Airline">
+                <input
+                  autoFocus
+                  className={`${inputClass} font-display text-xl`}
+                  value={draft.airline}
+                  onChange={(e) => set({ airline: e.target.value })}
+                  placeholder="Alaska Airlines"
+                />
+              </Field>
+              <Field label="Flight">
+                <input
+                  className={`${inputClass} w-24 text-center`}
+                  value={draft.flight_number || ''}
+                  onChange={(e) => set({ flight_number: e.target.value.toUpperCase() })}
+                  placeholder="AS 65"
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+              <Field label="From">
+                <input
+                  className={`${inputClass} text-center font-display text-2xl tracking-[0.12em]`}
+                  maxLength={4}
+                  value={draft.origin || ''}
+                  onChange={(e) => set({ origin: e.target.value.toUpperCase() })}
+                  placeholder="SEA"
+                />
+              </Field>
+              <span aria-hidden className="pb-3 font-sans text-[13px] text-gold/70">
+                →
+              </span>
+              <Field label="To">
+                <input
+                  className={`${inputClass} text-center font-display text-2xl tracking-[0.12em]`}
+                  maxLength={4}
+                  value={draft.destination || ''}
+                  onChange={(e) => set({ destination: e.target.value.toUpperCase() })}
+                  placeholder="KTN"
+                />
+              </Field>
+            </div>
+
+            {/* Times are local to each airport — see the note in entries.js. */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Departs">
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={draft.depart_date || ''}
+                  onChange={(e) =>
+                    set({
+                      depart_date: e.target.value,
+                      // Most flights land the same day; prefill so only the
+                      // red-eyes need correcting.
+                      arrive_date: draft.arrive_date || e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Departure time">
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={draft.depart_time || ''}
+                  onChange={(e) => set({ depart_time: e.target.value })}
+                />
+              </Field>
+              <Field label="Arrives">
+                <input
+                  type="date"
+                  className={inputClass}
+                  min={draft.depart_date || undefined}
+                  value={draft.arrive_date || ''}
+                  onChange={(e) => set({ arrive_date: e.target.value })}
+                />
+              </Field>
+              <Field label="Arrival time">
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={draft.arrive_time || ''}
+                  onChange={(e) => set({ arrive_time: e.target.value })}
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Seat">
+                <input
+                  className={inputClass}
+                  value={draft.seat || ''}
+                  onChange={(e) => set({ seat: e.target.value.toUpperCase() })}
+                  placeholder="14A"
+                />
+              </Field>
+              <Field label="Confirmation">
+                <input
+                  className={inputClass}
+                  value={draft.confirmation || ''}
+                  onChange={(e) => set({ confirmation: e.target.value.toUpperCase() })}
+                  placeholder="ABC123"
+                />
+              </Field>
+            </div>
+
+            <MoneyFields draft={draft} set={set} international={international} />
+
+            <Field label="Notes">
+              <textarea
+                rows={2}
+                className={`${inputClass} resize-none leading-relaxed`}
+                value={draft.notes || ''}
+                onChange={(e) => set({ notes: e.target.value })}
+                placeholder="Window seat, boards in group C."
+              />
+            </Field>
+          </>
+        )}
+
         {kind === 'hotels' && (
           <>
             <Field label="Hotel name">
