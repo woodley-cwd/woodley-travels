@@ -19,6 +19,7 @@ const store = createStore({
   cacheKey: 'wt.trips.v1',
   columns: TRIP_COLUMNS,
   sort: byDateDesc,
+  emptyAsNull: ['start_date', 'end_date'],
 })
 
 export const loadCache = store.loadCache

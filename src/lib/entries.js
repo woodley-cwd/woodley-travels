@@ -11,6 +11,7 @@ export const hotels = createStore({
     'currency', 'confirmation', 'notes', 'created_at', 'updated_at',
   ],
   sort: (a, b) => (a.check_in || '').localeCompare(b.check_in || ''),
+  emptyAsNull: ['check_in', 'check_out', 'cost_usd', 'cost_local'],
 })
 
 export const food = createStore({
@@ -21,6 +22,7 @@ export const food = createStore({
     'cost_usd', 'cost_local', 'currency', 'again', 'notes',
     'created_at', 'updated_at',
   ],
+  emptyAsNull: ['cost_usd', 'cost_local'],
 })
 
 export const postcards = createStore({

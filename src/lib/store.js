@@ -133,17 +133,22 @@ async function sync(op) {
    `columns` is the whitelist of fields that exist on the server, so client-only
    state never leaks into a request. */
 
-export function createStore({ table, cacheKey, columns, sort }) {
-  // Empty strings must become null: an unfilled date or cost field would
-  // otherwise be sent as '' and rejected outright by a `date` or `numeric`
-  // column.
-  const toRow = (item) =>
-    Object.fromEntries(
-      columns.map((c) => {
-        const v = item[c]
-        return [c, v === '' || v === undefined ? null : v]
-      })
-    )
+export function createStore({ table, cacheKey, columns, sort, emptyAsNull = [] }) {
+  // `emptyAsNull` lists the date/numeric columns where an unfilled field must
+  // be sent as null — Postgres rejects '' for those types. Everything else
+  // keeps '' as-is: several text columns (destination, name, label…) are NOT
+  // NULL, and nulling them made the server reject the whole row, which is how
+  // a trip with a blank destination once jammed the sync queue for good.
+  const scrub = new Set(emptyAsNull)
+  const toRow = (item) => {
+    const row = {}
+    for (const c of columns) {
+      const v = item[c]
+      if (v === undefined) continue // omit it; the server default fills it in
+      row[c] = v === '' && scrub.has(c) ? null : v
+    }
+    return row
+  }
 
   registry.set(table, { cacheKey, toRow })
 

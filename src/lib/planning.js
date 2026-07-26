@@ -8,6 +8,7 @@ export const cards = createStore({
   cacheKey: 'wt.cards.v1',
   columns: ['id', 'name', 'program', 'kind', 'points', 'notes', 'created_at', 'updated_at'],
   sort: (a, b) => (a.name || '').localeCompare(b.name || ''),
+  emptyAsNull: ['points'],
 })
 
 export const wishlist = createStore({

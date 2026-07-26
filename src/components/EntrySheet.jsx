@@ -73,10 +73,16 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
     e.preventDefault()
     if (!canSave) return
 
-    // Handle batch photo uploads
-    if (kind === 'photos' && draft._batchUrls && Array.isArray(draft._batchUrls)) {
-      draft._batchUrls.forEach((url) => {
-        onSave(kind, { ...draft, url, _batchUrls: undefined })
+    // Handle batch photo uploads. Each photo must get its own id — reusing the
+    // draft's id would make every row upsert over the previous one.
+    if (kind === 'photos' && Array.isArray(draft._batchUrls)) {
+      draft._batchUrls.forEach((url, i) => {
+        onSave(kind, {
+          ...draft,
+          id: i === 0 ? draft.id : crypto.randomUUID(),
+          url,
+          _batchUrls: undefined,
+        })
       })
     } else {
       onSave(kind, draft)
@@ -259,7 +265,12 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
                 />
               </Field>
             )}
-            {isNew && (
+            {draft._batchUrls?.length > 0 && (
+              <p className="rounded-md border border-gold/30 bg-gold/10 px-3 py-2 text-center font-sans text-[11px] text-gold-light">
+                {draft._batchUrls.length} photo{draft._batchUrls.length === 1 ? '' : 's'} ready — tap Add to save them all
+              </p>
+            )}
+            {isNew && !draft._batchUrls && (
               <p className="text-[11px] text-cream/60">
                 Upload multiple photos at once, then add captions to each one individually after.
               </p>
