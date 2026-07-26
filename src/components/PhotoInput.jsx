@@ -5,19 +5,26 @@ import { Camera, Trash, Compass } from './Icons'
 
 /* A single image slot. Compresses and stores on pick; hands the caller back a
    media ref to persist on the row. */
-export default function PhotoInput({ value, onChange, label = 'Photo', aspect = 'aspect-[4/3]' }) {
+export default function PhotoInput({ value, onChange, label = 'Photo', aspect = 'aspect-[4/3]', multiple = false }) {
   const input = useRef(null)
   const [busy, setBusy] = useState(false)
 
   const pick = async (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = '' // let the same file be re-picked after a removal
-    if (!file) return
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = '' // let the same files be re-picked after removal
+    if (!files.length) return
 
     setBusy(true)
     try {
-      const ref = await saveImage(file)
-      onChange(ref)
+      if (multiple) {
+        // Batch upload: return array of refs
+        const refs = await Promise.all(files.map((f) => saveImage(f)))
+        onChange(refs)
+      } else {
+        // Single upload: return single ref
+        const ref = await saveImage(files[0])
+        onChange(ref)
+      }
     } catch {
       // A non-image or a decode failure — leave the slot as it was.
     } finally {
@@ -73,6 +80,7 @@ export default function PhotoInput({ value, onChange, label = 'Photo', aspect = 
         ref={input}
         type="file"
         accept="image/*"
+        multiple={multiple}
         onChange={pick}
         className="hidden"
       />

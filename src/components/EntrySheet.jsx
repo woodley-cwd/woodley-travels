@@ -72,7 +72,15 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
   const submit = (e) => {
     e.preventDefault()
     if (!canSave) return
-    onSave(kind, draft)
+
+    // Handle batch photo uploads
+    if (kind === 'photos' && draft._batchUrls && Array.isArray(draft._batchUrls)) {
+      draft._batchUrls.forEach((url) => {
+        onSave(kind, { ...draft, url, _batchUrls: undefined })
+      })
+    } else {
+      onSave(kind, draft)
+    }
   }
 
   return (
@@ -228,17 +236,34 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
           <>
             <PhotoInput
               value={draft.url}
-              onChange={(url) => set({ url })}
-              label="Photo"
+              onChange={(urls) => {
+                // Handle both single and batch uploads
+                if (Array.isArray(urls)) {
+                  // Batch mode: store refs for later processing
+                  set({ _batchUrls: urls })
+                } else {
+                  // Single mode: store as before
+                  set({ url: urls })
+                }
+              }}
+              label={isNew ? 'Photos (upload multiple)' : 'Photo'}
+              multiple={isNew}
             />
-            <Field label="Caption">
-              <input
-                className={inputClass}
-                value={draft.caption || ''}
-                onChange={(e) => set({ caption: e.target.value })}
-                placeholder="The view from the terrace"
-              />
-            </Field>
+            {!draft._batchUrls && (
+              <Field label="Caption">
+                <input
+                  className={inputClass}
+                  value={draft.caption || ''}
+                  onChange={(e) => set({ caption: e.target.value })}
+                  placeholder="The view from the terrace"
+                />
+              </Field>
+            )}
+            {isNew && (
+              <p className="text-[11px] text-cream/60">
+                Upload multiple photos at once, then add captions to each one individually after.
+              </p>
+            )}
           </>
         )}
 
