@@ -67,13 +67,13 @@ export default function PlanScreen({
 
       <div className="mt-5">
         {view === 'wishlist' && (
-          <WishlistView list={wishlist} onEdit={(i) => setSheet({ kind: 'wishlist', item: i })} onPromote={onPromote} />
+          <WishlistView list={wishlist} onEdit={(i) => setSheet({ kind: 'wishlist', item: i })} onPromote={onPromote} onDelete={onDelete} />
         )}
         {view === 'cards' && (
-          <CardsView list={cards} onEdit={(i) => setSheet({ kind: 'cards', item: i })} />
+          <CardsView list={cards} onEdit={(i) => setSheet({ kind: 'cards', item: i })} onDelete={onDelete} />
         )}
         {view === 'packing' && (
-          <TemplatesView list={templates} onEdit={(i) => setSheet({ kind: 'packing', item: i })} />
+          <TemplatesView list={templates} onEdit={(i) => setSheet({ kind: 'packing', item: i })} onDelete={onDelete} />
         )}
       </div>
 
@@ -82,7 +82,7 @@ export default function PlanScreen({
         whileTap={{ scale: 0.92 }}
         aria-label={`Add ${view === 'packing' ? 'template' : view.replace(/s$/, '')}`}
         className="fixed right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-gold/40 bg-emerald shadow-[0_10px_28px_-8px_rgba(0,0,0,0.65)]"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 8rem)' }}
       >
         <Plus className="h-6 w-6 text-gold-light" />
       </motion.button>
@@ -110,7 +110,7 @@ export default function PlanScreen({
 
 /* — Views ——————————————————————————————————— */
 
-function WishlistView({ list, onEdit, onPromote }) {
+function WishlistView({ list, onEdit, onPromote, onDelete }) {
   if (list.length === 0) return <Empty>Nowhere on the someday list yet.</Empty>
 
   return (
@@ -137,12 +137,20 @@ function WishlistView({ list, onEdit, onPromote }) {
               </p>
             )}
           </button>
-          <button
-            onClick={() => onPromote(w)}
-            className="w-full border-t border-emerald/10 py-2.5 font-sans text-[9px] tracking-stamp text-emerald uppercase"
-          >
-            Make it a trip
-          </button>
+          <div className="flex divide-x divide-emerald/10 border-t border-emerald/10">
+            <button
+              onClick={() => onPromote(w)}
+              className="flex-1 py-2.5 font-sans text-[9px] tracking-stamp text-emerald uppercase"
+            >
+              Make it a trip
+            </button>
+            <button
+              onClick={() => onDelete('wishlist', w)}
+              className="flex-1 py-2.5 font-sans text-[9px] tracking-stamp text-burgundy/70 uppercase hover:text-burgundy"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -167,32 +175,39 @@ function CardsView({ list, onEdit }) {
 
       <div className="flex flex-col gap-2.5">
         {list.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => onEdit(c)}
-            className="card-paper texture-paper w-full rounded-lg px-4 py-3.5 text-left"
-          >
-            <div className="flex items-center gap-3">
-              {c.kind === 'hotel' ? (
-                <Bed className="h-4 w-4 shrink-0 text-gold/70" />
-              ) : c.kind === 'airline' ? (
-                <Plane className="h-4 w-4 shrink-0 text-gold/70" />
-              ) : (
-                <Wallet className="h-4 w-4 shrink-0 text-gold/70" />
-              )}
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate font-display text-lg leading-tight text-emerald-deep">
-                  {c.name || 'Untitled card'}
-                </h3>
-                {c.program && (
-                  <p className="truncate font-sans text-[10px] text-navy/75">{c.program}</p>
+          <div key={c.id} className="card-paper texture-paper overflow-hidden rounded-lg">
+            <button
+              onClick={() => onEdit(c)}
+              className="w-full px-4 py-3.5 text-left"
+            >
+              <div className="flex items-center gap-3">
+                {c.kind === 'hotel' ? (
+                  <Bed className="h-4 w-4 shrink-0 text-gold/70" />
+                ) : c.kind === 'airline' ? (
+                  <Plane className="h-4 w-4 shrink-0 text-gold/70" />
+                ) : (
+                  <Wallet className="h-4 w-4 shrink-0 text-gold/70" />
                 )}
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-display text-lg leading-tight text-emerald-deep">
+                    {c.name || 'Untitled card'}
+                  </h3>
+                  {c.program && (
+                    <p className="truncate font-sans text-[10px] text-navy/75">{c.program}</p>
+                  )}
+                </div>
+                <span className="shrink-0 font-display text-xl text-emerald">
+                  {formatPoints(c.points)}
+                </span>
               </div>
-              <span className="shrink-0 font-display text-xl text-emerald">
-                {formatPoints(c.points)}
-              </span>
-            </div>
-          </button>
+            </button>
+            <button
+              onClick={() => onDelete('cards', c)}
+              className="w-full border-t border-emerald/10 py-2.5 font-sans text-[9px] tracking-stamp text-burgundy/70 uppercase hover:text-burgundy"
+            >
+              Delete
+            </button>
+          </div>
         ))}
       </div>
 
@@ -203,29 +218,36 @@ function CardsView({ list, onEdit }) {
   )
 }
 
-function TemplatesView({ list, onEdit }) {
+function TemplatesView({ list, onEdit, onDelete }) {
   if (list.length === 0) return <Empty>No packing templates yet.</Empty>
 
   return (
     <div className="flex flex-col gap-2.5">
       {list.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => onEdit(t)}
-          className="card-paper texture-paper w-full rounded-lg px-4 py-3.5 text-left"
-        >
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="truncate font-display text-lg text-emerald-deep">
-              {t.name || 'Untitled'}
-            </h3>
-            <span className="shrink-0 font-sans text-[9px] tracking-stamp text-emerald uppercase">
-              {(t.items ?? []).length} items
-            </span>
-          </div>
-          <p className="mt-0.5 truncate font-sans text-[10px] text-navy/75">
-            {(t.items ?? []).slice(0, 6).join(' · ') || 'Empty list'}
-          </p>
-        </button>
+        <div key={t.id} className="card-paper texture-paper overflow-hidden rounded-lg">
+          <button
+            onClick={() => onEdit(t)}
+            className="w-full px-4 py-3.5 text-left"
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="truncate font-display text-lg text-emerald-deep">
+                {t.name || 'Untitled'}
+              </h3>
+              <span className="shrink-0 font-sans text-[9px] tracking-stamp text-emerald uppercase">
+                {(t.items ?? []).length} items
+              </span>
+            </div>
+            <p className="mt-0.5 truncate font-sans text-[10px] text-navy/75">
+              {(t.items ?? []).slice(0, 6).join(' · ') || 'Empty list'}
+            </p>
+          </button>
+          <button
+            onClick={() => onDelete('packing', t)}
+            className="w-full border-t border-emerald/10 py-2.5 font-sans text-[9px] tracking-stamp text-burgundy/70 uppercase hover:text-burgundy"
+          >
+            Delete
+          </button>
+        </div>
       ))}
     </div>
   )
