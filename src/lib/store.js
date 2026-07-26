@@ -22,8 +22,14 @@ export const write = (key, value) =>
   localStorage.setItem(key, JSON.stringify(value))
 
 // A request that never settles is worse than one that fails: it strands the
-// UI. Every network call is raced against a hard ceiling.
-const NET_TIMEOUT = 6000
+// UI. Every network call is raced against a hard ceiling. 12s rather than 6:
+// a phone on hotel wifi routinely needs more than 6s for a cold TLS handshake,
+// and a spurious timeout parks the write in the queue.
+const NET_TIMEOUT = 12000
+
+// The last push failure, surfaced so SyncStatus can say *why* the count is
+// stuck instead of spinning silently forever.
+export const SYNC_ERROR_KEY = 'wt.sync.lastError'
 
 export const withTimeout = (promise, ms = NET_TIMEOUT) =>
   Promise.race([
@@ -52,21 +58,29 @@ export async function flushQueue() {
   const queue = read(QUEUE_KEY, [])
   if (queue.length === 0) return
 
+  // Ordering only matters per row — an insert and the delete that follows it
+  // must replay in sequence, but one row's failure must not strand every other
+  // row's changes behind it. Block by id, not globally.
+  const blocked = new Set()
   const stuck = []
+  let lastError = null
   for (const op of queue) {
-    // Once one op fails, everything after it must wait — replaying out of
-    // order could resurrect a deleted row.
-    if (stuck.length > 0) {
+    if (blocked.has(op.id)) {
       stuck.push(op)
       continue
     }
     try {
       await withTimeout(push(op))
-    } catch {
+    } catch (err) {
+      blocked.add(op.id)
       stuck.push(op)
+      lastError = `${op.table}: ${err?.message || 'network error'}`
+      console.warn('[sync] failed to push change', op, err)
     }
   }
   write(QUEUE_KEY, stuck)
+  if (stuck.length > 0 && lastError) write(SYNC_ERROR_KEY, lastError)
+  else localStorage.removeItem(SYNC_ERROR_KEY)
 }
 
 async function sync(op) {
@@ -74,7 +88,8 @@ async function sync(op) {
   try {
     await withTimeout(push(op))
     await flushQueue()
-  } catch {
+  } catch (err) {
+    console.warn('[sync] change queued after failed push', op, err)
     enqueue(op)
   }
 }

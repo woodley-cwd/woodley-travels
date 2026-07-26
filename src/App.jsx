@@ -162,6 +162,30 @@ export default function App() {
     return () => window.removeEventListener('online', onOnline)
   }, [refreshEntries, rewriteMedia])
 
+  // The 'online' event only fires on a connectivity *transition* — a write
+  // that failed while nominally online would otherwise sit queued until the
+  // next full app open. Retry on a timer instead; flushQueue is a no-op when
+  // the queue is empty.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      flushQueue().then(() => flushMedia(rewriteMedia))
+    }, 20_000)
+    return () => clearInterval(timer)
+  }, [rewriteMedia])
+
+  // Coming back to the tab (or PWA) after using it on another device: pull
+  // fresh data so the two screens converge without a manual reload.
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== 'visible') return
+      setTrips(await fetchTrips())
+      await refreshEntries()
+      await refreshPlanning()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [refreshEntries, refreshPlanning])
+
   /* — Trips ————————————————————————————————— */
 
   const handleSaveTrip = async (trip) => {

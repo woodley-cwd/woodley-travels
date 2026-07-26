@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { read } from '../lib/store'
+import { read, SYNC_ERROR_KEY } from '../lib/store'
 
 /* Offline / pending-sync indicator.
 
@@ -18,6 +18,7 @@ const pendingCount = () =>
 export default function SyncStatus() {
   const [online, setOnline] = useState(() => navigator.onLine)
   const [pending, setPending] = useState(pendingCount)
+  const [error, setError] = useState(() => localStorage.getItem(SYNC_ERROR_KEY))
 
   useEffect(() => {
     const up = () => setOnline(true)
@@ -27,7 +28,10 @@ export default function SyncStatus() {
 
     // localStorage has no change event for same-tab writes, so poll. Cheap:
     // two JSON.parse calls on small arrays.
-    const timer = setInterval(() => setPending(pendingCount()), 2000)
+    const timer = setInterval(() => {
+      setPending(pendingCount())
+      setError(localStorage.getItem(SYNC_ERROR_KEY))
+    }, 2000)
 
     return () => {
       window.removeEventListener('online', up)
@@ -41,7 +45,9 @@ export default function SyncStatus() {
     ? pending > 0
       ? `Offline · ${pending} waiting to sync`
       : 'Offline · changes saved here'
-    : `Syncing ${pending} change${pending === 1 ? '' : 's'}…`
+    : error
+      ? `${pending} change${pending === 1 ? '' : 's'} can't sync`
+      : `Syncing ${pending} change${pending === 1 ? '' : 's'}…`
 
   return (
     <AnimatePresence>
@@ -57,13 +63,18 @@ export default function SyncStatus() {
           aria-live="polite"
         >
           <span
-            className={`rounded-full border px-3.5 py-1.5 font-sans text-[9px] tracking-stamp uppercase backdrop-blur-md ${
-              online
+            className={`flex flex-col items-center rounded-full border px-3.5 py-1.5 font-sans text-[9px] tracking-stamp uppercase backdrop-blur-md ${
+              online && !error
                 ? 'border-gold/40 bg-emerald-deep/90 text-gold-light'
                 : 'border-burgundy/60 bg-burgundy/40 text-cream'
             }`}
           >
             {label}
+            {online && error && (
+              <span className="mt-0.5 max-w-[260px] truncate normal-case tracking-normal text-cream/80">
+                {error}
+              </span>
+            )}
           </span>
         </motion.div>
       )}
