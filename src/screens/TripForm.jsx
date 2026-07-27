@@ -193,7 +193,7 @@ export default function TripForm({ trip, onSave, onDelete, onClose }) {
                 Remove this entry?
               </h2>
               <p className="mt-2 font-sans text-[12px] leading-relaxed text-navy/75">
-                “{draft.name}” and everything in it — flights, hotels, food, postcards,
+                “{draft.name}” and everything in it — flights, hotels, itinerary, food, postcards,
                 photos — will be erased. This can’t be undone.
               </p>
               <div className="mt-6 flex flex-col gap-2">

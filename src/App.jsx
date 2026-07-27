@@ -13,7 +13,9 @@ import BadgesScreen from './screens/BadgesScreen'
 import TripDetail from './screens/TripDetail'
 import TripForm from './screens/TripForm'
 import { fetchTrips, saveTrip, deleteTrip, loadCache, emptyTrip, flushQueue } from './lib/trips'
-import { STORES, emptyFlight, emptyHotel, emptyFood, emptyPostcard, emptyPhoto } from './lib/entries'
+import {
+  STORES, emptyFlight, emptyHotel, emptyItineraryItem, emptyFood, emptyPostcard, emptyPhoto,
+} from './lib/entries'
 import { evaluateBadges } from './lib/badges'
 import { flushMedia } from './lib/media'
 import PlanScreen from './screens/PlanScreen'
@@ -24,11 +26,12 @@ import SyncStatus from './components/SyncStatus'
 import { PLANNING_STORES, emptyChecklistItem } from './lib/planning'
 import { dueReminders, notifyDue } from './lib/reminders'
 
-const KINDS = ['flights', 'hotels', 'food', 'postcards', 'photos']
+const KINDS = ['flights', 'hotels', 'itinerary', 'food', 'postcards', 'photos']
 
 const blankEntry = {
   flights: emptyFlight,
   hotels: emptyHotel,
+  itinerary: emptyItineraryItem,
   food: emptyFood,
   postcards: emptyPostcard,
   photos: emptyPhoto,
@@ -39,6 +42,7 @@ const blankEntry = {
 const MEDIA_FIELDS = {
   flights: [],
   hotels: [],
+  itinerary: [],
   food: ['photo_url'],
   postcards: ['front_url', 'back_url'],
   photos: ['url'],
@@ -322,6 +326,8 @@ export default function App() {
                   setSheet({ kind, entry: blankEntry[kind](openTrip.id) })
                 }
                 onEditEntry={(kind, entry) => setSheet({ kind, entry })}
+                onSaveEntry={handleSaveEntry}
+                onDeleteEntry={handleDeleteEntry}
                 onStamp={handleStamp}
               />
             ) : tab === 'maps' ? (

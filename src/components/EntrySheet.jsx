@@ -51,6 +51,7 @@ function MoneyFields({ draft, set, international }) {
 }
 
 const TITLES = {
+  itinerary: 'Plan',
   flights: 'Flight',
   hotels: 'Hotel',
   food: 'Food Entry',
@@ -67,7 +68,12 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
 
   // Only hotels and food carry a required name; postcards and photos are
   // image-first and can be saved with nothing else filled in.
-  const required = { flights: draft.airline, hotels: draft.name, food: draft.dish }[kind]
+  const required = {
+    itinerary: draft.title,
+    flights: draft.airline,
+    hotels: draft.name,
+    food: draft.dish,
+  }[kind]
   const canSave = required === undefined || String(required ?? '').trim().length > 0
 
   const submit = (e) => {
@@ -93,6 +99,73 @@ export default function EntrySheet({ kind, entry, trip, onSave, onDelete, onClos
   return (
     <Sheet title={`${isNew ? 'Add' : 'Edit'} ${TITLES[kind]}`} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {kind === 'itinerary' && (
+          <>
+            <Field label="What">
+              <input
+                autoFocus
+                className={`${inputClass} font-display text-xl`}
+                value={draft.title}
+                onChange={(e) => set({ title: e.target.value })}
+                placeholder="Misty Fjords flightseeing"
+              />
+            </Field>
+
+            {/* Both optional: an itinerary starts as a wishlist and firms up. */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Day">
+                <input
+                  type="date"
+                  className={inputClass}
+                  min={trip.start_date || undefined}
+                  max={trip.end_date || undefined}
+                  value={draft.day || ''}
+                  onChange={(e) => set({ day: e.target.value })}
+                />
+              </Field>
+              <Field label="Time">
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={draft.at_time || ''}
+                  onChange={(e) => set({ at_time: e.target.value })}
+                />
+              </Field>
+            </div>
+
+            <Field label="Where">
+              <input
+                className={inputClass}
+                value={draft.location || ''}
+                onChange={(e) => set({ location: e.target.value })}
+                placeholder="Creek Street"
+              />
+            </Field>
+
+            <Field label="Notes">
+              <textarea
+                rows={3}
+                className={`${inputClass} resize-none leading-relaxed`}
+                value={draft.notes || ''}
+                onChange={(e) => set({ notes: e.target.value })}
+                placeholder="Book ahead — it fills up in summer."
+              />
+            </Field>
+
+            <Field label="Done">
+              <Segmented
+                group="itinerary-done"
+                value={draft.done ? 'yes' : 'no'}
+                onChange={(v) => set({ done: v === 'yes' })}
+                options={[
+                  ['no', 'Still to do'],
+                  ['yes', 'Did it'],
+                ]}
+              />
+            </Field>
+          </>
+        )}
+
         {kind === 'flights' && (
           <>
             <div className="grid grid-cols-[1fr_auto] gap-3">

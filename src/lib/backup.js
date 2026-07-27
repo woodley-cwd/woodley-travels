@@ -17,6 +17,7 @@ const KEYS = [
   'wt.trips.v1',
   'wt.flights.v1',
   'wt.hotels.v1',
+  'wt.itinerary.v1',
   'wt.food.v1',
   'wt.postcards.v1',
   'wt.photos.v1',

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { forTrip, tripTotals, money } from '../lib/entries'
+import { forTrip, tripTotals, money, itineraryProgress } from '../lib/entries'
+import TripItinerary from '../components/TripItinerary'
 import { daysUntil, formatRange, tripNights } from '../lib/trips'
 import { regionName, flagEmoji } from '../lib/places'
 import MediaImage from '../components/MediaImage'
@@ -7,7 +8,8 @@ import Postcard from '../components/Postcard'
 import TripChecklist from '../components/TripChecklist'
 import TravelChat from '../components/TravelChat'
 import {
-  Back, Pencil, Plus, Plane, Bed, Fork, Mail, Camera, Wallet, Heart, Stamp, Users, Sparkle,
+  Back, Pencil, Plus, Plane, Bed, Fork, Mail, Camera, Wallet, Heart, Stamp, Users,
+  Sparkle, Compass,
 } from '../components/Icons'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -50,8 +52,10 @@ const Empty = ({ children }) => (
 
 export default function TripDetail({
   trip, entries, checklist, templates, onBack, onEditTrip, onAddEntry, onEditEntry,
-  onStamp, onSaveCheckItem, onDeleteCheckItem, onApplyTemplate,
+  onSaveEntry, onDeleteEntry, onStamp, onSaveCheckItem, onDeleteCheckItem,
+  onApplyTemplate,
 }) {
+  const itinerary = forTrip(entries.itinerary, trip.id)
   const flights = forTrip(entries.flights, trip.id)
   const hotels = forTrip(entries.hotels, trip.id)
   const food = forTrip(entries.food, trip.id)
@@ -281,6 +285,27 @@ export default function TripDetail({
             ))}
           </div>
         )}
+      </Section>
+
+      {/* Itinerary */}
+      <Section
+        icon={Compass}
+        title="Itinerary"
+        count={itinerary.length}
+        onAdd={() => onAddEntry('itinerary')}
+      >
+        {itinerary.length > 0 && (
+          <p className="mb-3 font-sans text-[10px] tracking-stamp text-cream/70 uppercase">
+            {itineraryProgress(itinerary).done} of {itinerary.length} done
+          </p>
+        )}
+        <TripItinerary
+          trip={trip}
+          items={itinerary}
+          onSave={onSaveEntry}
+          onDelete={onDeleteEntry}
+          onEdit={onEditEntry}
+        />
       </Section>
 
       {/* Food */}

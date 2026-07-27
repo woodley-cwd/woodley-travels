@@ -33,6 +33,23 @@ export const flights = createStore({
   emptyAsNull: ['depart_date', 'arrive_date', 'cost_usd', 'cost_local'],
 })
 
+/* Undated items sort last: they're the "sometime while we're there" list, and
+   burying the scheduled days under them would defeat the point. */
+export const itinerary = createStore({
+  table: 'travel_itinerary',
+  cacheKey: 'wt.itinerary.v1',
+  columns: [
+    'id', 'trip_id', 'title', 'day', 'at_time', 'location', 'notes', 'done',
+    'sort', 'created_at', 'updated_at',
+  ],
+  sort: (a, b) =>
+    `${a.day || '9999'}${a.at_time || '99:99'}${String(a.sort ?? 0).padStart(4, '0')}`
+      .localeCompare(
+        `${b.day || '9999'}${b.at_time || '99:99'}${String(b.sort ?? 0).padStart(4, '0')}`
+      ),
+  emptyAsNull: ['day'],
+})
+
 export const food = createStore({
   table: 'travel_food',
   cacheKey: 'wt.food.v1',
@@ -59,7 +76,7 @@ export const photos = createStore({
   columns: ['id', 'trip_id', 'url', 'caption', 'created_at', 'updated_at'],
 })
 
-export const STORES = { flights, hotels, food, postcards, photos }
+export const STORES = { flights, hotels, itinerary, food, postcards, photos }
 
 const stamp = (trip_id) => ({
   id: crypto.randomUUID(),
@@ -84,6 +101,17 @@ export const emptyFlight = (trip_id) => ({
   cost_local: '',
   currency: '',
   notes: '',
+})
+
+export const emptyItineraryItem = (trip_id, sort = 0) => ({
+  ...stamp(trip_id),
+  title: '',
+  day: '',
+  at_time: '',
+  location: '',
+  notes: '',
+  done: false,
+  sort,
 })
 
 export const emptyHotel = (trip_id) => ({
@@ -127,6 +155,39 @@ export const emptyPhoto = (trip_id) => ({
 })
 
 export const forTrip = (list, tripId) => list.filter((e) => e.trip_id === tripId)
+
+/* Itinerary grouped into day headings. The store already sorts undated items
+   last, so preserving encounter order is enough — no second sort here. */
+export function byDay(items) {
+  const groups = []
+  for (const item of items) {
+    const key = item.day || ''
+    const group = groups.find((g) => g.day === key)
+    if (group) group.items.push(item)
+    else groups.push({ day: key, items: [item] })
+  }
+  return groups
+}
+
+export const itineraryProgress = (items) => ({
+  done: items.filter((i) => i.done).length,
+  total: items.length,
+})
+
+/* "Thu, Jul 16" — plus the trip-relative day number, which is how people
+   actually talk about an itinerary ("day three we did the glacier"). */
+export function dayHeading(day, tripStart) {
+  if (!day) return { label: 'Any day', sub: '' }
+  const d = new Date(`${day}T00:00:00`)
+  const label = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+  if (!tripStart) return { label, sub: '' }
+  const n = Math.round((d - new Date(`${tripStart}T00:00:00`)) / 86_400_000) + 1
+  return { label, sub: n >= 1 ? `Day ${n}` : '' }
+}
 
 /* — Cost totals ————————————————————————————————
    Auto-calculated from linked entries; the trip itself stores no totals, so
