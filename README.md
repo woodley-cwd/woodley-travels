@@ -152,6 +152,11 @@ model call, and web searches are billed per search on top of that. Searching is
 capped at 5 per message in `api/chat.js`, and `effort` is set to `medium` —
 raise it there if you want more thorough answers at higher cost.
 
+A search-heavy question can take more than one model call. Web search runs a
+loop on Anthropic's side, and when that loop hits its own iteration cap the API
+hands back an unfinished turn that has to be resumed — up to `MAX_CONTINUATIONS`
+times. The 5-search cap still covers the whole question, not each attempt.
+
 Chat history is stored locally per conversation and never synced to Supabase.
 
 ## Phase 6 — what's built

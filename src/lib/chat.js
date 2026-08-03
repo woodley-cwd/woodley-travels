@@ -7,7 +7,16 @@ const ENDPOINT = '/api/chat'
 
 /* Reads the SSE stream and invokes callbacks as events arrive.
    Returns a function that aborts the in-flight request. */
-export function streamChat({ messages, trip, onText, onSearching, onSources, onDone, onError }) {
+export function streamChat({
+  messages,
+  trip,
+  onText,
+  onSearching,
+  onSearched,
+  onSources,
+  onDone,
+  onError,
+}) {
   const controller = new AbortController()
 
   ;(async () => {
@@ -66,6 +75,7 @@ export function streamChat({ messages, trip, onText, onSearching, onSources, onD
 
           if (event === 'text') onText?.(payload.text)
           else if (event === 'searching') onSearching?.(payload.query)
+          else if (event === 'searched') onSearched?.(payload.count)
           else if (event === 'sources') onSources?.(payload.sources)
           else if (event === 'error') onError?.(payload.message)
           else if (event === 'done') onDone?.(payload)

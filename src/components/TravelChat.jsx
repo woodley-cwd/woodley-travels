@@ -30,7 +30,9 @@ export default function TravelChat({ scope, trip, compact = false, placeholder }
   const [messages, setMessages] = useState(() => loadChat(scope))
   const [draft, setDraft] = useState('')
   const [streaming, setStreaming] = useState(false)
-  const [searching, setSearching] = useState(null)
+  // What the model is doing right now, as a line of text — or null when the
+  // answer itself is coming through.
+  const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
 
   const abortRef = useRef(null)
@@ -44,6 +46,28 @@ export default function TravelChat({ scope, trip, compact = false, placeholder }
 
   // Abort an in-flight request if the component goes away mid-answer.
   useEffect(() => () => abortRef.current?.(), [])
+
+  // A turn can end with nothing written — a refusal, a stopped stream, a search
+  // that never resolved. Don't leave a blank bubble behind either way.
+  const dropEmptyAssistant = useCallback(
+    () =>
+      setMessages((m) => {
+        const last = m[m.length - 1]
+        return last?.role === 'assistant' && !last.content ? m.slice(0, -1) : m
+      }),
+    []
+  )
+
+  /* Aborting a fetch doesn't run the stream's completion path, so stopping has
+     to put the UI back by hand — otherwise the Stop button stays stuck on and
+     the composer never comes back. */
+  const stop = useCallback(() => {
+    abortRef.current?.()
+    abortRef.current = null
+    setStreaming(false)
+    setStatus(null)
+    dropEmptyAssistant()
+  }, [dropEmptyAssistant])
 
   const send = useCallback(() => {
     const text = draft.trim()
@@ -82,34 +106,35 @@ export default function TravelChat({ scope, trip, compact = false, placeholder }
           }
         : null,
       onText: (t) => {
-        setSearching(null)
+        setStatus(null)
         patchLast((last) => ({ content: last.content + t }))
       },
-      onSearching: (q) => setSearching(q || 'the web'),
+      onSearching: (q) => setStatus(`Searching ${q || 'the web'}…`),
+      // Results are in but the answer hasn't started. This gap can run long,
+      // and leaving "Searching…" up through it reads as a search that hung.
+      onSearched: () => setStatus('Reading results…'),
       onSources: (sources) => patchLast(() => ({ sources })),
       onError: (message) => {
         setError(message)
-        // Drop the empty assistant turn so the transcript isn't left with a
-        // blank bubble above the error.
-        setMessages((m) => {
-          const last = m[m.length - 1]
-          return last?.role === 'assistant' && !last.content ? m.slice(0, -1) : m
-        })
+        dropEmptyAssistant()
       },
       onDone: () => {
         setStreaming(false)
-        setSearching(null)
+        setStatus(null)
         abortRef.current = null
+        dropEmptyAssistant()
       },
     })
-  }, [draft, messages, streaming, trip])
+  }, [draft, dropEmptyAssistant, messages, streaming, trip])
 
   const reset = () => {
     abortRef.current?.()
+    abortRef.current = null
     clearChat(scope)
     setMessages([])
     setError(null)
     setStreaming(false)
+    setStatus(null)
   }
 
   return (
@@ -166,7 +191,7 @@ export default function TravelChat({ scope, trip, compact = false, placeholder }
         ))}
 
         <AnimatePresence>
-          {searching && (
+          {status && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -175,13 +200,13 @@ export default function TravelChat({ scope, trip, compact = false, placeholder }
             >
               <Search className="h-3.5 w-3.5 animate-pulse text-gold-light" />
               <span className="truncate font-sans text-[11px] text-cream/70">
-                Searching {searching}…
+                {status}
               </span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {streaming && !searching && messages[messages.length - 1]?.content === '' && (
+        {streaming && !status && messages[messages.length - 1]?.content === '' && (
           <div className="flex items-center gap-2 px-1">
             <Compass className="animate-compass h-4 w-4 text-gold/70" />
             <span className="font-sans text-[11px] text-cream/70">Thinking…</span>
@@ -213,7 +238,7 @@ export default function TravelChat({ scope, trip, compact = false, placeholder }
         />
         <motion.button
           type="button"
-          onClick={streaming ? () => abortRef.current?.() : send}
+          onClick={streaming ? stop : send}
           whileTap={{ scale: 0.94 }}
           disabled={!streaming && !draft.trim()}
           aria-label={streaming ? 'Stop' : 'Send'}
